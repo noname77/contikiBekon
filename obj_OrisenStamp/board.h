@@ -1,1 +1,0 @@
-../../../cpu/mc1322x/board/OrisenStamp.h
