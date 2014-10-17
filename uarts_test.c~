@@ -50,7 +50,7 @@ PROCESS_THREAD(uarts_test, ev, data)
     {
       printf("UART2 received: %s\n\r", data);
       //for router
-      //shell_input(data, strlen(data));
+      shell_input(data, strlen(data));
     }
   }
 
