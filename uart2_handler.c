@@ -48,8 +48,8 @@ PROCESS_THREAD(uart2_process, ev, data)
         uart2_putc(*p++);
         cnt++;
       }
-      uart2_putc('\n');
-      printf("%d bytes sent to uart2\n\r", ++cnt);
+      //uart2_putc('\n');
+      printf("%d bytes sent to uart2\n\r", cnt);
       process_post(PROCESS_BROADCAST, uart2_sent, NULL);
     }
 
@@ -73,30 +73,29 @@ PROCESS_THREAD(uart2_process, ev, data)
   PROCESS_END();
 }
 
+
 /*---------------------------------------------------------------------------*/
 PROCESS(uart2_log_process, "UART2 LOG Process");
 PROCESS_THREAD(uart2_log_process, ev, data)
 {
-  static int fd = 0;
-
+  static int fd;
   PROCESS_EXITHANDLER(cfs_close(fd));
   PROCESS_BEGIN();
-   
+  
   struct RTC_time t;
   char timestamp[24];
-  
-  // open file to dump uart2 data
-  fd = cfs_open("uart2log.txt", CFS_APPEND);
 
-  if(fd < 0) {
-    printf("u2le: could not open file for writing");
-  }
-  else 
+  while(1)
   {
-    while(1)
+    PROCESS_WAIT_EVENT_UNTIL(ev == serial_line2_event_message || ev == UART2_SEND);
+
+    // open file to dump uart2 data
+    fd = cfs_open("uart2log.txt", CFS_APPEND);
+    if(fd < 0) {
+      printf("u2le: could not open file for writing");
+    }
+    else
     {
-      PROCESS_WAIT_EVENT_UNTIL(ev == serial_line2_event_message || ev == UART2_SEND);
-      
       //get timestamp
       RTC_getTime(&t);
       sprintf(timestamp, "%02d/%02d/%02d %02d:%02d:%02d.%d%d", t.day, t.month, t.year, t.hours, t.minutes, t.seconds, t.tenths, t.hundredths);

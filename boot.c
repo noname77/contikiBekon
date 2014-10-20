@@ -8,6 +8,7 @@
 #include "mesh_my.h"
 #include "rudolph1_my.h"
 #include "settings_read.h"
+#include "lcd.h"
 
 PROCESS(boot_process, "Boot Process");
 
@@ -36,16 +37,14 @@ PROCESS_THREAD(boot_process, ev, data)
   commands_init();
   printf("[OK]\n\r");
 
+/*
   printf("initialize uSD card...");
 	uSDcard_init();
   printf("[OK]\n\r");
+*/
 
   printf("initialize uarts test...");
   uarts_test_init();
-  printf("[OK]\n\r");
-
-  printf("load settings from sd card...");
-  load_settings();
   printf("[OK]\n\r");
 
   //printf("initialize rime collect...");
@@ -62,13 +61,16 @@ PROCESS_THREAD(boot_process, ev, data)
   printf("initialize rudolph1...");
   rudolph1_init();
   printf("[OK]\n\r");
+  
+  printf("load settings from sd card...");
+  load_settings();
+  printf("[OK]\n\r");
 
   // for amman
   //process_start(&uart1_shell_disable_process, NULL);
   //process_start(&rimeaddr_change_process, "10");
   
-  // register itself in the hub  
-
+  // register itself in the hub
 
   printf("Boot succesfull.\n\r");  
   PROCESS_END();

@@ -1,0 +1,101 @@
+// driver for MIDAS MCCOG21605B6W-FPTLWI 16x2 lcd display
+// see datasheet here: http://www.farnell.com/datasheets/1663636.pdf
+//
+// pinout:
+// PIN 1 - VOUT         Connect a cap between this and VDD if 3V is used 
+// PIN 2 - CAP1N        Conncet a 0.1-4.7 uF cap between this and CAP1P if 3V is used
+// PIN 3 - CAP1P
+// PIN 4 - VDD          Power supply (3V or 5V) 
+// PIN 5 - VSS          GND
+// PIN 6 - SDA          i2c data
+// PIN 7 - SCL          i2c clock
+// PIN 8 - RST          reset
+
+#define LCD_ADDR 0x3e // i2c addr of the display
+
+#define BLINK 0x01
+#define CURSOR 0x02
+#define DDRAM_SET 0x80
+#define LINE2 0x40
+
+static char cursor;
+static char line;
+
+//initialize the display
+void lcd_init()
+{
+  const char init_commands = {0x38, 0x39, 0x14, 0x74, 0x54, 0x6f, 0x0c, 0x01};
+  i2c_transmitinit(LCD_ADDR,8,&init_commands);
+  cursor = 0x0f;
+  line = 0x00;
+}
+
+//print string str to display
+void lcd_print(char* str)
+{
+  char len = strlen(str);
+  char cmd[len+1];
+  cmd[0] = 0x40;
+  mamcpy(&cmd[1], str, len);
+  i2c_transmitinit(LCD_ADDR,len+1,&cmd);
+}
+
+//clear the display
+void lcd_clear()
+{
+  const char cmd[] = {0x80, 0x01};
+  i2c_transmitinit(LCD_ADDR,2,&cmd);
+}
+
+//put cursor home (pos 1,1)
+void lcd_home()
+{
+  const char cmd[] = {0x80, 0x02};
+  i2c_transmitinit(LCD_ADDR,2,&cmd);
+}
+
+void lcd_move_cursor(char dir)
+{
+  char cmd;
+  if (dir == CURSOR_LEFT) cmd = 0x10;
+  else if (dir == CURSOR_RIGHT) cmd = 0x14;
+
+  char cmd[] = {0x80, cursor};
+}
+
+//move cursor to row r, column c
+void lcd_set_cursor(int r, int c)
+{
+  char addr = 0;
+  lcd_home();
+  if(r != 0) addr |= LINE2;
+  if(c<=0x0F) addr += c;
+  char cmd[] = {0x80, DDRAM_SET |= addr};
+  i2c_transmitinit(LCD_ADDR,2,&cmd);
+}
+
+//turn cursor on
+void lcd_cursor(char state)
+{
+  if (state == 0) cursor &= ~CURSOR;
+  else cursor |= CURSOR;
+  char cmd[] = {0x80, cursor};
+  i2c_transmitinit(LCD_ADDR,2,&cmd);
+}
+
+//turn cursor off
+void lcd_blink(char state)
+{
+  if (state == 0) cursor &= ~BLINK;
+  else cursor |= BLINK;
+  char cmd[] = {0x80, cursor};
+  i2c_transmitinit(LCD_ADDR,2,&cmd);
+}
+
+//delete current character at cursor
+void lcd_delete()
+{
+  const char cmd[] = {0x40, 0x20};
+  i2c_transmitinit(LCD_ADDR,2,&cmd);
+}
+
