@@ -11,6 +11,7 @@
 #include "dev/serial-line.h"
 #include "dev/leds.h"
 #include "lcd.h"
+#include "ble.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +21,7 @@ SHELL_COMMAND(test_command, "test", "test: test own commands", &testcmd_process)
 /* --------------------------------- */
 PROCESS_THREAD(testcmd_process, ev, data) {
 PROCESS_BEGIN();
-  printf("Stuff works!\n\r");
+  shell_output_str(&test_command, "test: ", "Stuff works!");
 PROCESS_END();
 }
 
@@ -46,9 +47,11 @@ PROCESS_BEGIN();
     clock_delay_msec(50);
     PROCESS_EXIT();
   }
+     
+  if (strcmp(next, "on") == 0) leds_on(l);
+  else if (strcmp(next, "off") == 0) leds_off(l);
 
-  if (!strcmp(next, "on")) leds_on(l);
-  else if (!strcmp(next, "off")) leds_off(l);
+  shell_output_str(&led_command, "LED OK", NULL);
 PROCESS_END();
 }
 
@@ -60,20 +63,46 @@ PROCESS_BEGIN();
   static char* str;
   str = (char*) data;
   char* next;
+  
+  char* shell_out;
 
-  if ((next = strstr(str, "-C")) != NULL) lcd_clear();
-  else if ((next = strstr(str, "-h")) != NULL) lcd_home();
+  if ((next = strstr(str, "-C")) != NULL)
+  {
+    lcd_clear();
+    shell_out = "cleared";
+  }
+  else if ((next = strstr(str, "-h")) != NULL)
+  {
+    lcd_home();
+    shell_out = "cursor homed";
+  }
   else if ((next = strstr(str, "-b")) != NULL)
   {
     next += 3;
-    if(*next == '0') lcd_blink(0);
-    else  lcd_blink(1);
+    if(*next == '0')
+    {
+      lcd_blink(0);
+      shell_out = "cursor blink off";
+    }
+    else
+    {
+      lcd_blink(1);
+      shell_out = "cursor blink on";
+    }
   }
   else if ((next = strstr(str, "-c")) != NULL)
   {
     next += 3;
-    if(*next == '0') lcd_cursor(0);
-    else  lcd_cursor(1);
+    if(*next == '0')
+    {
+      lcd_cursor(0);
+      shell_out = "cursor off";
+    }
+    else
+    {
+      lcd_cursor(1);
+      shell_out = "cursor on";
+    }
   }
   else if ((next = strstr(str, "-p1")) != NULL)
   {
@@ -82,6 +111,7 @@ PROCESS_BEGIN();
       next += 4;
       lcd_home();
       lcd_print(next);
+      shell_out = "printed";
     }
   }
   else if ((next = strstr(str, "-p2")) != NULL)
@@ -91,8 +121,11 @@ PROCESS_BEGIN();
       next += 4;
       lcd_set_cursor(1,0);
       lcd_print(next);
+      shell_out = "printed";
     }
   }
+
+  shell_output_str(&lcd_command, "lcd: ", shell_out);
 PROCESS_END();
 }
 
@@ -114,8 +147,19 @@ PROCESS_BEGIN();
   char len;
   char cmd = 0;
 
-  next = strstr(str, "-s");
-  if (next != NULL)
+  if(strstr(str, "-r") != NULL)
+  {
+    ble_reset();
+    shell_output_str(&ble_command, "ble: restarted", "");
+    PROCESS_EXIT();
+  }
+  else if (strstr(str, "-dfu") != NULL) //update ble112 firmware from file
+  {
+    // start the dfu process
+    ble_dfu_init();  
+    PROCESS_EXIT();
+  }
+  else if ((next = strstr(str, "-s")) != NULL)
   {
     next += 3;
     len = strlen(next);// < 120 ? strlen(next) : 119;
@@ -124,7 +168,7 @@ PROCESS_BEGIN();
   //next = strstr(str, "-D1");  // for data1 request
   else if (strstr(str, "-D1") != NULL)
   {
-    len = file_read("d1.txt", &buffer[3], BUF_LEN-5);
+    len = file_read("d1.txt", &buffer[3], BUF_LEN-5, 0);
     cmd = '!';
   }
   if (cmd != 0)
@@ -168,6 +212,7 @@ PROCESS_BEGIN();
       PROCESS_WAIT_EVENT_UNTIL(ev == serial_line2_event_message && strstr(data, "ble x") != NULL);
     }
   }
+  shell_output_str(&ble_command, "ble: OK", "");
 PROCESS_END();
 }
 
@@ -178,7 +223,7 @@ SHELL_COMMAND(uart2_send_command, "u2s", "u2s: send string to uart2", &uart2_sen
 /* --------------------------------- */
 PROCESS_THREAD(uart2_send, ev, data) {
 PROCESS_BEGIN();
-  printf("will be printing to uart2\r\n");
+  shell_output_str(&uart2_send_command, "u2s: sending..", "");
   process_post(PROCESS_BROADCAST, UART2_SEND, data);
 PROCESS_END();
 }
@@ -190,12 +235,14 @@ SHELL_COMMAND(rimeaddr_change, "cra", "cra: change rime address", &rimeaddr_chan
 PROCESS_THREAD(rimeaddr_change_process, ev, data) {
 PROCESS_BEGIN();
   unsigned char* ptr = data;
+  char shell_out[3];  
   //set node address
   rimeaddr_t my_addr;
   my_addr.u8[0] = (*ptr++) - 48;
   my_addr.u8[1] = (*ptr) - 48;
   rimeaddr_set_node_addr(&my_addr);
-  printf("Rime address changed to %d.%d\n\r", my_addr.u8[0], my_addr.u8[1]);
+  sprintf(shell_out, "%d.%d", my_addr.u8[0], my_addr.u8[1]);
+  shell_output_str(&rimeaddr_change, "Rime address changed to: ", shell_out);
 PROCESS_END();
 }
 
@@ -207,7 +254,7 @@ SHELL_COMMAND(collect_start, "cs", "cs: start collect process", &collect_start_p
 PROCESS_THREAD(collect_start_process, ev, data) {
 PROCESS_BEGIN();
   collect_init();
-  printf("Collect process started\n\r");
+  printf("Collect process started\n\r");    // put that to  collect init
 PROCESS_END();
 }
 */
@@ -271,7 +318,7 @@ SHELL_COMMAND(mesh_start, "mshs", "mshs: start mesh process", &mesh_start_proces
 PROCESS_THREAD(mesh_start_process, ev, data) {
 PROCESS_BEGIN();
   mesh_init();
-  printf("Mesh process started\n\r");
+  shell_output_str(&mesh_start, "mesh: started", NULL);
 PROCESS_END();
 }
 
@@ -282,7 +329,7 @@ SHELL_COMMAND(mesh_end, "mshe", "mshe: end mesh process", &mesh_end_process);
 PROCESS_THREAD(mesh_end_process, ev, data) {
 PROCESS_BEGIN();
   mesh_exit();
-  printf("Mesh process terminated\n\r");
+  shell_output_str(&mesh_end, "mesh: terminated", NULL);
 PROCESS_END();
 }
 
@@ -298,19 +345,40 @@ PROCESS_BEGIN();
   if(str == NULL)
     PROCESS_EXIT();
 
+/*
   next = strchr(str, ' ');
   if (next++ == NULL)
     PROCESS_EXIT();
-
+*/
   rimeaddr_t addr;
   addr.u8[0] = *str++ - 48;
   addr.u8[1] = *str - 48;
   mesh_set_dest(addr);
 
-  data_len = strlen(next);
+  if((next = strstr(str, "-p")) != NULL)
+  {
+    next += 3;
+    if (next != NULL)
+    {
+      process_post(&mesh_process, mesh_send_event, next);
+      PROCESS_WAIT_EVENT_UNTIL(ev == mesh_sent);  // should i wait a little too?
+      //delay?
+      clock_delay_msec(10);
+      process_post(&mesh_process, mesh_send_event, "post");
+    }
+  }
+  else if ((next = strchr(str, ' ')) != NULL)
+  {
+    if (++next != NULL)
+      process_post(&mesh_process, mesh_send_event, next);
+  }
+  PROCESS_WAIT_EVENT_UNTIL(ev == mesh_sent);  // should i wait a little too?
+  shell_output_str(&mesh_send_cmd, "mshsnd: sent", NULL);
+//  data_len = strlen(next);
 
-  if (data_len <= 20)
-    process_post(&mesh_process, mesh_send_event, next);
+//  if (data_len <= 20)
+    //process_post(&mesh_process, mesh_send_event, next);
+/*
   else  // this doesnt really work well, figure out why?
   {
     printf("data too long for a single packet. len: %d; splitting data...\n\r", data_len);
@@ -330,7 +398,8 @@ PROCESS_BEGIN();
     }
     process_post(&mesh_process, mesh_send_event, ptr);
   }
-  printf("Mesh send requested.\n\r");
+*/
+  //printf("Mesh send requested.\n\r");
 PROCESS_END();
 }
 

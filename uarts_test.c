@@ -29,16 +29,6 @@ PROCESS_THREAD(uarts_test, ev, data)
   while(1)
   {
     PROCESS_WAIT_EVENT();
-/*
-    etimer_set(&timer, 5*CLOCK_SECOND);
-    
-    if(ev == PROCESS_EVENT_TIMER)
-    {
-      //printf("Posting stuff to uart2.\n\r");
-      process_start(&multihop_send_process, "msnd 10 test");
-      process_start(&multihop_send_process, "msnd 10 post");
-    }
-*/
     if(ev == serial_line1_event_message)
     {
       FLASH_LED(LEDS_GREEN);

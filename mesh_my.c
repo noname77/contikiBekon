@@ -50,7 +50,6 @@
 #include <string.h>
 
 #define CHANNEL 132
-#define MESSAGE "Hello"
 
 #define FLASH_LED(l) {leds_on(l); clock_delay_msec(50); leds_off(l); clock_delay_msec(50);}
 
@@ -84,10 +83,7 @@ recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 	 packetbuf_datalen(), (char *)packetbuf_dataptr(), packetbuf_datalen());
 
   char* p = packetbuf_dataptr();
-  char * tmp = p;
-  //if(strcmp(p, "post") == 0)
-  // ugly maybe will work
-  if ((*tmp++ == 'p') && (*tmp++ == 'o') && (*tmp++ == 's') && (*tmp++ == 't'))
+  if (strstr(p, "post") != NULL)
   {
     serial_line_input_byte('\n', 0);    // input to serial line 1 (same as uart1)
   }
@@ -111,49 +107,19 @@ PROCESS_THREAD(mesh_process, ev, data)
 
   mesh_open(&mesh, CHANNEL, &callbacks);
 
-  SENSORS_ACTIVATE(button_sensor);
-
   while(1) {
     
 
-    /* Wait until we get a sensor event with the button sensor as data. */
-    PROCESS_WAIT_EVENT_UNTIL((ev == sensors_event &&
-			     data == &button_sensor) || ev == mesh_send_event);
+    /* Wait until we get a request from comand line */
+    PROCESS_WAIT_EVENT_UNTIL( ev == mesh_send_event);
 
-    //on button event send test stuff
-    if (ev == sensors_event)
+    if(data != NULL)
     {
-      /* Copy the "Hello" to the packet buffer. */
-      packetbuf_copyfrom("u2s test", 9);
-
-      /* Set the Rime address of the final receiver of the packet to
-         1.0. or 9.9 depending on which node am I*/
-      if(rimeaddr_node_addr.u8[0] != 1)
-      {
-        addr.u8[0] = 1;
-        addr.u8[1] = 0;
-      }
-      else
-      {
-        addr.u8[0] = 9;
-        addr.u8[1] = 9;
-      }
-
+      packetbuf_copyfrom(data, strlen(data));
+      printf("Sending mesh to %u.%u: %s\n\r", addr.u8[0], addr.u8[1], data);
       /* Send the packet. */
       mesh_send(&mesh, &addr);
-      packetbuf_copyfrom("post", 5);
-      mesh_send(&mesh, &addr);
-    }
-    else // request from comand line
-    {
-      if(data != NULL)
-      {
-        packetbuf_copyfrom(data, strlen(data));
-        printf("Sending mesh to %u.%u: %s\n\r", addr.u8[0], addr.u8[1], data);
-        /* Send the packet. */
-        mesh_send(&mesh, &addr);
-        process_post(PROCESS_BROADCAST, mesh_sent, data);
-      }
+      process_post(PROCESS_BROADCAST, mesh_sent, NULL);
     }
   }
   PROCESS_END();
@@ -163,11 +129,13 @@ PROCESS_THREAD(mesh_process, ev, data)
 void mesh_init()
 {
   process_start(&mesh_process, NULL);
+  printf("Mesh process started\n\r");
 }
 
 void mesh_exit()
 {
   process_exit(&mesh_process);
+  printf("Mesh process terminated\n\r");
 }
 
 void mesh_set_dest(rimeaddr_t dest)

@@ -16,8 +16,12 @@
 #include "uarts_test.h"
 #include "lcd.h"
 #include "SDcard.h"
+#include "serial-shell.h"
+#include "io-pins.h"
 
 #define FILENAME "settings.txt"
+#define MAX_SETTINGS_LEN 128
+
 #define SET_RIME "RIMEADDR"
 #define SET_COLLECT "COLLECT"
 #define SET_MULTIHOP "MULTIHOP"
@@ -25,7 +29,9 @@
 #define UART1_SHELL_INPUT "UART1_SHELL_INPUT"
 #define UART2_SHELL_INPUT "UART2_SHELL_INPUT"
 #define UART2_LOG "UART2_LOG"
-#define LCD "LCD"
+#define LCD "LCD" // TODO: change to WITH_LCD ?
+#define IS_GATEWAY "IS_GATEWAY"
+#define WITH_BLE "WITH_BLE"
 
 PROCESS(settings_load_process, "Load settings process");
 PROCESS_THREAD(settings_load_process, ev, data)
@@ -36,20 +42,37 @@ PROCESS_BEGIN()
   // We must have this statement before using the card
 	uSDcard_init();
   printf("Initialised uSD card\n");
-  char settings[64];
+  char settings[MAX_SETTINGS_LEN];
 
-  file_read(FILENAME, settings, 64);
+  file_read(FILENAME, settings, MAX_SETTINGS_LEN, 0);
   
- 	printf("Read settings: %s", settings);
+ 	printf("Read settings: %s\n\r", settings);
 	// power down the micro SD card
 	uSDcard_power_down();
- 	printf("uSD card powered down\n");
+ 	printf("uSD card powered down\n\r");
 
 // does it get passed without static?
   static char *ptr;
+
+  ptr = strstr(settings, IS_GATEWAY);
+  if (ptr != NULL)
+  {
+    ptr += strlen(IS_GATEWAY) + 1;
+    if(*ptr == '1')
+    {
+      set_shell_default_output(UART2);
+      printf("Default shell output is UART2.\n\r");
+    }
+    else
+    {
+      set_shell_default_output(UART1);
+      printf("Default shell output is UART1\n\r");
+    }
+  }
+
   // set rime addr
   ptr = strstr(settings, SET_RIME);
-  if (ptr != NULL);
+  if (ptr != NULL)
   {
     ptr += strlen(SET_RIME) + 1;
     process_start(&rimeaddr_change_process, ptr);
@@ -58,7 +81,7 @@ PROCESS_BEGIN()
 /*
   // autostart collect
   ptr = strstr(settings, SET_COLLECT);
-  if (ptr != NULL);
+  if (ptr != NULL)
   {
     ptr += strlen(SET_COLLECT) + 1;
     if(*ptr == '1')
@@ -66,7 +89,7 @@ PROCESS_BEGIN()
   }
   // autostart multihop
   ptr = strstr(settings, SET_MULTIHOP);
-  if (ptr != NULL);
+  if (ptr != NULL)
   {
     ptr += strlen(SET_MULTIHOP) + 1;
     if(*ptr == '1')
@@ -75,7 +98,7 @@ PROCESS_BEGIN()
 */
   // enable UART1 shell input
   ptr = strstr(settings, UART1_SHELL_INPUT);
-  if (ptr != NULL);
+  if (ptr != NULL)
   {
     ptr += strlen(UART1_SHELL_INPUT) + 1;  
     if(*ptr == '1')
@@ -85,7 +108,7 @@ PROCESS_BEGIN()
   }
   // enable UART2 shell input
   ptr = strstr(settings, UART2_SHELL_INPUT);
-  if (ptr != NULL);
+  if (ptr != NULL)
   {
     ptr += strlen(UART2_SHELL_INPUT) + 1;  
     if(*ptr == '1')
@@ -95,7 +118,7 @@ PROCESS_BEGIN()
   }
   // enable UART2 logging
   ptr = strstr(settings, UART2_LOG);
-  if (ptr != NULL);
+  if (ptr != NULL)
   {
     ptr += strlen(UART2_LOG) + 1;  
     if(*ptr == '1')
@@ -103,9 +126,17 @@ PROCESS_BEGIN()
     else
       process_start(&uart2_log_disable_process, NULL);
   }
+  // power up ble
+  ptr = strstr(settings, WITH_BLE);
+  if (ptr != NULL) 
+  {
+    ptr += strlen(WITH_BLE) + 1;
+    if(*ptr == '1')
+      ioPins_setValue(8, 1);  // ble reset high
+  }
   // initialize lcd
   ptr = strstr(settings, LCD);
-  if (ptr != NULL);
+  if (ptr != NULL) 
   {
     ptr += strlen(LCD) + 1;
     if(*ptr == '1')

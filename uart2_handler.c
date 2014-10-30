@@ -161,6 +161,7 @@ uart2_serial_input_init()
 {
   //uart2_init(63, MOD, SAMP);     //9600
   //uart2_init(NODE_INC, MOD, SAMP); //115200
+  // TODO: flush buffers first
   process_start(&uart2_serial_input_process, NULL);
   printf("uart2 shell input enabled\n\r");
 }

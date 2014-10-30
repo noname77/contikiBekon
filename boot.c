@@ -9,6 +9,8 @@
 #include "rudolph1_my.h"
 #include "settings_read.h"
 #include "lcd.h"
+#include "serial-shell.h"
+#include "io-pins.h"
 
 PROCESS(boot_process, "Boot Process");
 
@@ -21,6 +23,10 @@ PROCESS_THREAD(boot_process, ev, data)
   printf("Stuff to be done during boot:\n\r");
 
   // system initialization
+  printf("configure io pins...");
+  ioPins_configurePin(8, USEGPIO, OUTPUT, NOPULLUP, HYSTERESIS_OFF);
+  ioPins_setValue(8, 0);  // dont boot ble yet
+  printf("[OK]\n\r");
   printf("initialize uart2...");
   uart2_handler_init();
   printf("[OK]\n\r");
@@ -28,6 +34,7 @@ PROCESS_THREAD(boot_process, ev, data)
   serial_line_init();
   printf("[OK]\n\r");
   printf("initialize serial shell...");
+  set_shell_default_output(UART1);
   serial_shell_init();
   printf("[OK]\n\r");
   printf("initialize file shell...");
@@ -70,7 +77,7 @@ PROCESS_THREAD(boot_process, ev, data)
   //process_start(&uart1_shell_disable_process, NULL);
   //process_start(&rimeaddr_change_process, "10");
   
-  // register itself in the hub
+  // TODO: register itself in the hub (gateway)
 
   printf("Boot succesfull.\n\r");  
   PROCESS_END();
