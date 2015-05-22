@@ -15,8 +15,10 @@
 #include "commands.h"
 #include "uarts_test.h"
 #include "lcd.h"
+#include "ble.h"
 #include "SDcard.h"
 #include "serial-shell.h"
+#include "dev/serial-line.h"
 #include "io-pins.h"
 
 #define FILENAME "settings.txt"
@@ -29,9 +31,9 @@
 #define UART1_SHELL_INPUT "UART1_SHELL_INPUT"
 #define UART2_SHELL_INPUT "UART2_SHELL_INPUT"
 #define UART2_LOG "UART2_LOG"
-#define LCD "LCD" // TODO: change to WITH_LCD ?
+#define SETTING_WITH_LCD "WITH_LCD"
 #define IS_GATEWAY "IS_GATEWAY"
-#define WITH_BLE "WITH_BLE"
+#define SETTING_WITH_BLE "WITH_BLE"
 
 PROCESS(settings_load_process, "Load settings process");
 PROCESS_THREAD(settings_load_process, ev, data)
@@ -41,15 +43,15 @@ PROCESS_BEGIN()
   // Initialise the micro SD card.
   // We must have this statement before using the card
 	uSDcard_init();
-  printf("Initialised uSD card\n");
+  //printf("Initialised uSD card\n");
   char settings[MAX_SETTINGS_LEN];
 
   file_read(FILENAME, settings, MAX_SETTINGS_LEN, 0);
   
- 	printf("Read settings: %s\n\r", settings);
+ 	printf("Read settings.txt:\n\r%s\n\r", settings);
 	// power down the micro SD card
-	uSDcard_power_down();
- 	printf("uSD card powered down\n\r");
+	//uSDcard_power_down();
+ 	//printf("uSD card powered down\n\r");
 
 // does it get passed without static?
   static char *ptr;
@@ -102,9 +104,11 @@ PROCESS_BEGIN()
   {
     ptr += strlen(UART1_SHELL_INPUT) + 1;  
     if(*ptr == '1')
-      process_start(&uart1_shell_enable_process, NULL);
+      uart1_set_input(serial_line_input_byte);
+      //process_start(&uart1_shell_enable_process, NULL);
     else
-      process_start(&uart1_shell_disable_process, NULL);
+      uart1_set_input(NULL);
+      //rocess_start(&uart1_shell_disable_process, NULL);
   }
   // enable UART2 shell input
   ptr = strstr(settings, UART2_SHELL_INPUT);
@@ -112,9 +116,11 @@ PROCESS_BEGIN()
   {
     ptr += strlen(UART2_SHELL_INPUT) + 1;  
     if(*ptr == '1')
-      process_start(&uart2_shell_enable_process, NULL);
+      uart2_serial_input_init();
+      //process_start(&uart2_shell_enable_process, NULL);
     else
-      process_start(&uart2_shell_disable_process, NULL);
+      uart2_serial_input_exit();
+      //process_start(&uart2_shell_disable_process, NULL);
   }
   // enable UART2 logging
   ptr = strstr(settings, UART2_LOG);
@@ -122,26 +128,31 @@ PROCESS_BEGIN()
   {
     ptr += strlen(UART2_LOG) + 1;  
     if(*ptr == '1')
-      process_start(&uart2_log_enable_process, NULL);
+      shell_input("u2 -l 1", 7);
     else
-      process_start(&uart2_log_disable_process, NULL);
+      shell_input("u2 -l 0", 7);
   }
   // power up ble
-  ptr = strstr(settings, WITH_BLE);
+  ptr = strstr(settings, SETTING_WITH_BLE);
   if (ptr != NULL) 
   {
-    ptr += strlen(WITH_BLE) + 1;
+    ptr += strlen(SETTING_WITH_BLE) + 1;
     if(*ptr == '1')
+    {
       ioPins_setValue(8, 1);  // ble reset high
+      ble_init();
+    }
   }
   // initialize lcd
-  ptr = strstr(settings, LCD);
+
+  ptr = strstr(settings, SETTING_WITH_LCD);
   if (ptr != NULL) 
   {
-    ptr += strlen(LCD) + 1;
+    ptr += strlen(SETTING_WITH_LCD) + 1;
     if(*ptr == '1')
       lcd_init();
   }
+
 //redirect uart1 output traffic to uart2
 /*
   ptr = strstr(settings, UART1_TO_UART2);

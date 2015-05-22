@@ -16,6 +16,7 @@
 
 #include "contiki.h"
 #include "lcd.h"
+#include "io-pins.h"
 //#include <stdio.h>
 #include <string.h>
 
@@ -47,6 +48,9 @@ void lcd_init()
   cursor = 0x0f;
   line = 0x00;
   
+  // turn backlight on
+  lcd_backlight(1);
+
   lcd_print("hello boss :)");
   lcd_set_cursor(1,0);
   lcd_print("contiki booted!");
@@ -93,7 +97,7 @@ void lcd_move_cursor(char dir)
   wait_for_transfer();
 }
 
-//move cursor to row r(0/1), column c(0-16)
+//move cursor to row r(0/1), column c(0-15)
 void lcd_set_cursor(int r, int c)
 {
   char addr = 0;
@@ -125,7 +129,16 @@ void lcd_blink(char state)
   wait_for_transfer();
 }
 
-//delete current character at cursor
+//turn backlight on/off (1/0)
+void lcd_backlight(char state)
+{
+  if (state == 0)
+    ioPins_setValue(LCD_BACKLIGHT_PIN, 0);  // lcd backlight low
+  else
+    ioPins_setValue(LCD_BACKLIGHT_PIN, 1);  // lcd backlight high
+}
+
+//delete current character at cursor 
 void lcd_delete()
 {
   const char cmd[] = {0x40, 0x20};

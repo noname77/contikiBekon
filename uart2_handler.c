@@ -9,7 +9,6 @@
 #include "uart2_handler.h"
 #include "RTC.h"
 #include "cfs/cfs.h"
-#include "dev/serial-line.h"
 
 #define FLASH_LED(l) {leds_on(l); clock_delay_msec(50); leds_off(l); clock_delay_msec(50);}
 
@@ -53,20 +52,6 @@ PROCESS_THREAD(uart2_process, ev, data)
       process_post(PROCESS_BROADCAST, uart2_sent, NULL);
     }
 
-    //if(ev == UART2_SEND)
-    /*
-    int cnt = 0;
-    while (uart2_can_get())
-    {
-      cnt++;
-      char c = uart2_getc();
-      
-      // add to a buffer until received a line and post to all processes
-      serial_line_input_byte(c, 1);
-      // print to usb   
-      //uart1_putc(c);
-	  }
-*/
     //PRINTF("\n\r%d bytes received\n\r", cnt); 
   }
 

@@ -53,6 +53,14 @@
 
 #define FLASH_LED(l) {leds_on(l); clock_delay_msec(50); leds_off(l); clock_delay_msec(50);}
 
+#define DEBUG 0
+#if DEBUG
+#include <stdio.h>
+#define PRINTF(...) printf(__VA_ARGS__)
+#else
+#define PRINTF(...)
+#endif
+
 static struct mesh_conn mesh;
 process_event_t mesh_send_event;
 process_event_t mesh_sent;
@@ -63,14 +71,14 @@ PROCESS(mesh_process, "Mesh process");
 static void
 sent(struct mesh_conn *c)
 {
-  printf("mesh: packet sent\n");
+  PRINTF("mesh: packet sent\n");
   process_post(PROCESS_BROADCAST, mesh_sent, NULL);
 }
 
 static void
 timedout(struct mesh_conn *c)
 {
-  printf("mesh: packet timedout\n");
+  PRINTF("mesh: packet timedout\n");
 }
 
 static void
@@ -78,7 +86,7 @@ recv(struct mesh_conn *c, const rimeaddr_t *from, uint8_t hops)
 {
   FLASH_LED(LEDS_BLUE);
 
-  printf("Data received from %d.%d: %.*s (%d)\n",
+  PRINTF("Data received from %d.%d: %.*s (%d)\n",
 	 from->u8[0], from->u8[1],
 	 packetbuf_datalen(), (char *)packetbuf_dataptr(), packetbuf_datalen());
 
@@ -116,7 +124,7 @@ PROCESS_THREAD(mesh_process, ev, data)
     if(data != NULL)
     {
       packetbuf_copyfrom(data, strlen(data));
-      printf("Sending mesh to %u.%u: %s\n\r", addr.u8[0], addr.u8[1], data);
+      PRINTF("Sending mesh to %u.%u: %s\n\r", addr.u8[0], addr.u8[1], data);
       /* Send the packet. */
       mesh_send(&mesh, &addr);
       process_post(PROCESS_BROADCAST, mesh_sent, NULL);
@@ -129,13 +137,13 @@ PROCESS_THREAD(mesh_process, ev, data)
 void mesh_init()
 {
   process_start(&mesh_process, NULL);
-  printf("Mesh process started\n\r");
+  //printf("Mesh process started\n\r");
 }
 
 void mesh_exit()
 {
   process_exit(&mesh_process);
-  printf("Mesh process terminated\n\r");
+  //printf("Mesh process terminated\n\r");
 }
 
 void mesh_set_dest(rimeaddr_t dest)

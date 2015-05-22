@@ -1,5 +1,6 @@
 #define CURSOR_LEFT 0
 #define CURSOR_RIGHT 1
+#define LCD_BACKLIGHT_PIN 7
 
 //initialize the display
 void lcd_init();
@@ -25,6 +26,9 @@ void lcd_cursor(char state);
 
 //turn blink on/off (1/0)
 void lcd_blink(char state);
+
+//turn backlight on/off (1/0)
+void lcd_backlight(char state);
 
 //delete current character at cursor
 void lcd_delete();

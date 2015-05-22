@@ -4,6 +4,8 @@
 #include "contiki-uart.h"
 #include "SDcard.h"
 #include "io-pins.h"
+#include "dev/serial-line.h"
+#include "dev/leds.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -57,6 +59,17 @@ int ble112_send_command(char* command, char command_len, char* response)
     return -1;
   }
   else return 1;
+}
+
+PROCESS(ble_process, "BLE Process");
+PROCESS_THREAD(ble_process, ev, data){
+PROCESS_BEGIN();
+  while(1)
+  {
+    PROCESS_WAIT_EVENT_UNTIL(ev == serial_line2_event_message);
+
+  }
+PROCESS_END();
 }
 
 
@@ -169,5 +182,5 @@ void ble_dfu_init()
 
 void ble_init()
 {
-  //process_start(&ble_process, NULL);
+  process_start(&ble_process, NULL);
 }

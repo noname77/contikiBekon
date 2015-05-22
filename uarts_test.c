@@ -24,6 +24,7 @@ PROCESS_THREAD(uarts_test, ev, data)
   static char msg[] = "Data\n";
   char* ptr = msg;
   PROCESS_BEGIN();
+
   u1tou2 = 0;
 
   while(1)
